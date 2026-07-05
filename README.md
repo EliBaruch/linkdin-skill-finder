@@ -14,17 +14,34 @@ This plugin:
 
 ## Install
 
+**One line, in your terminal** (requires the Claude Code CLI on your PATH):
+
+```bash
+claude plugin marketplace add EliBaruch/linkdin-skill-finder && claude plugin install linkedin-skill-finder@linkdin-skill-finder
+```
+
+**Or inside Claude Code**, as two slash commands:
+
 ```
 /plugin marketplace add EliBaruch/linkdin-skill-finder
 /plugin install linkedin-skill-finder@linkdin-skill-finder
 ```
 
 Restart the session if prompted so the recall hook loads. Sharing it with someone
-else is just those two commands.
+else is just this one line (or the two commands).
 
-Requirements: `bash` and `python` (3.x) on your PATH — the recall hook uses them
-(the same assumption as Anthropic's official `security-guidance` plugin). If
-Python is missing the hook simply stays silent; it never breaks your session.
+## Requirements
+
+| Need | For | If you don't have it |
+|------|-----|----------------------|
+| **Claude Code** (CLI, desktop, or IDE) | everything — the `/plugin` commands are a Claude Code feature | can't install; a plain `git clone` in a terminal does nothing |
+| **This repo is public** | `/plugin marketplace add` fetches it without login | others can't install |
+| **`bash` + `python` 3.x** on your PATH | the auto-recall hook | collecting still works, but recall silently does nothing (it never breaks your session) |
+| **[Claude for Chrome](https://www.anthropic.com/claude-in-chrome)** browser tools + logged into LinkedIn | the *collect* step reads LinkedIn through your browser | you can't scan LinkedIn; the rest of the plugin still loads |
+
+macOS/Linux ship with `bash` and usually `python3`. On Windows, Git Bash provides
+`bash` and Python is a normal install — the recall hook forces UTF-8 output so it
+works on Windows consoles too.
 
 ## Use
 
