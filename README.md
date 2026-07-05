@@ -64,6 +64,11 @@ summary, author, and the skill link. Creators often put the real repo link in th
 **first comment** (so LinkedIn won't suppress the post for having an external
 link) — the collector reads the first comment for exactly that case.
 
+Saved links are **auto-cleaned of tracking junk** — utm_* tags, click ids
+(`gclid`/`fbclid`/…), LinkedIn `trk`/`li_fat_id`, and other lead trackers are
+stripped, while genuine parameters are kept. So the catalog stores the real
+destination, and fetching a skill never phones home someone's lead tracker.
+
 ### Recall — automatic, every task
 
 You don't do anything. When you ask Claude to do something, a `UserPromptSubmit`

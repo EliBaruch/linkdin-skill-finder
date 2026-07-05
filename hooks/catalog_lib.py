@@ -11,6 +11,7 @@ import json
 import os
 import re
 import hashlib
+from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
 
 # Override with LSF_CATALOG_PATH (used for testing); defaults to ~/.claude/...
 CATALOG_PATH = os.environ.get(
@@ -163,6 +164,55 @@ def normalize(text):
     return re.sub(r"[^a-z0-9]+", "", (text or "").lower())
 
 
+# Known lead/marketing/analytics tracking query parameters to strip from links.
+# Kept conservative on purpose: only well-known trackers, so we never break a
+# link by dropping a parameter the destination actually needs.
+_TRACKING_PARAMS = {
+    "gclid", "fbclid", "dclid", "gbraid", "wbraid", "msclkid", "yclid", "twclid",
+    "ttclid", "igshid", "mc_cid", "mc_eid", "mkt_tok", "vero_id", "vero_conv",
+    "oly_anon_id", "oly_enc_id", "_hsenc", "_hsmi", "hsctatracking", "spm", "scm",
+    "trk", "trackingid", "li_fat_id", "refid", "midtoken", "otptoken", "ref_src",
+    "ref_url", "s_cid", "epik", "cmpid", "icid", "ncid", "sr_share", "guccounter",
+    "eltl", "elqtrack",
+}
+
+
+def _is_tracking_param(name):
+    n = (name or "").lower()
+    return n in _TRACKING_PARAMS or n.startswith("utm_") or n.endswith("clid")
+
+
+def clean_url(url):
+    """Strip lead/tracking query parameters from a URL, keeping the rest intact.
+
+    Removes utm_* tags, click ids (gclid/fbclid/...), LinkedIn trackers
+    (trk, li_fat_id, ...) and other known analytics params. Non-tracking
+    parameters, the path, and the fragment are preserved. Anything it can't
+    parse is returned unchanged.
+
+    Note: this cleans query params only — it does NOT unwrap link shorteners
+    like lnkd.in/bit.ly (that needs following the redirect, which the fetch
+    step does via WebFetch).
+    """
+    url = (url or "").strip()
+    if not url:
+        return url
+    try:
+        parts = urlsplit(url)
+        if not parts.query:
+            return url
+        kept = [
+            (k, v)
+            for (k, v) in parse_qsl(parts.query, keep_blank_values=True)
+            if not _is_tracking_param(k)
+        ]
+        return urlunsplit(
+            (parts.scheme, parts.netloc, parts.path, urlencode(kept), parts.fragment)
+        )
+    except Exception:
+        return url
+
+
 def entry_tokens(entry):
     """The set of tokens an entry can be matched on: its keywords + its name."""
     toks = set()
@@ -205,6 +255,11 @@ def add_entries(new_entries):
     added = 0
     enriched = 0
     for new in new_entries:
+        # Scrub lead/tracking params before storing, matching, or fetching.
+        if new.get("url"):
+            new["url"] = clean_url(new["url"])
+        if new.get("post_url"):
+            new["post_url"] = clean_url(new["post_url"])
         match = next((ex for ex in catalog if same_skill(ex, new)), None)
         if match is not None:
             if _enrich(match, new):

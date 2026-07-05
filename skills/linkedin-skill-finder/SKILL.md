@@ -59,6 +59,11 @@ through the plugin's helper (it handles ids + dedupe and reports the count):
 python "${CLAUDE_PLUGIN_ROOT}/hooks/collect_add.py" < entries.json
 ```
 
+Links are **auto-cleaned of lead/tracking parameters** on save (utm_*, click ids,
+LinkedIn `trk`/`li_fat_id`, etc. — via `catalog_lib.clean_url`), so you don't need
+to strip them yourself. It cleans query params only; it does not unwrap shortened
+links like `lnkd.in` (the fetch step follows those redirects).
+
 ## When to fetch
 
 If the user says "fetch it" / names a saved skill (often right after the recall
