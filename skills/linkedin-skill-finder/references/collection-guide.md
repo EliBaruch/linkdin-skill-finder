@@ -90,7 +90,10 @@ Good keywords are what make recall fire later.
   `python "${CLAUDE_PLUGIN_ROOT}/hooks/collect_add.py" < entries.json`
 - It dedupes by the skill's `url` (falling back to `post_url`, then name+author),
   so the same skill seen in a saved post and a DM becomes one entry, and
-  re-running collection is safe.
+  re-running collection is safe. When a later sighting has details the first
+  lacked — most importantly a repo link that was missing — it **enriches** the
+  existing entry instead of adding a duplicate (`collect_add.py` reports both the
+  added and enriched counts).
 - Report: posts scanned, new skills added, and the list of new names. Mention the
   scroll cap. If nothing new, say so plainly.
 

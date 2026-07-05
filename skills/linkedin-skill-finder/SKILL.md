@@ -43,10 +43,14 @@ Follow **`references/collection-guide.md`** step by step. In short:
    - If a link is only ever in the body, set `link_source: "body"`.
 4. Generate 4–8 lowercase `keywords` per skill (these drive recall matching).
 5. Dedupe + append with `catalog_lib.add_entries(...)`. Identity is the skill's
-   `url`, so the same skill seen in a saved post AND a DM collapses to one entry
-   (first sighting wins); it falls back to `post_url`, then name+author.
-6. Report: how many posts scanned, how many new skills added, and list the new
-   names. If nothing new, say so.
+   `url`, so the same skill seen in a saved post AND a DM becomes one entry. When
+   two sightings match, the existing entry is **enriched** rather than duplicated:
+   a missing `url` gets filled from the sighting that has it (e.g. the link was
+   only in a DM), `summary`/`author` gaps are filled, keywords are merged, and
+   every source it was seen in is recorded in `sources`. Different repos with the
+   same name stay separate.
+6. Report: how many posts scanned, how many new skills added, how many existing
+   entries were enriched, and list the new names. If nothing new, say so.
 
 To save, write the entries you built as a JSON array to a temp file and pipe it
 through the plugin's helper (it handles ids + dedupe and reports the count):
@@ -79,10 +83,14 @@ hook surfaced one), or asks to install a catalogued skill:
   "post_url": "https://linkedin.com/posts/...",
   "author": "Jane Doe",
   "source": "saved | messages | feed",
+  "sources": ["saved", "messages"],
   "keywords": ["pdf", "form", "fill", "document"],
   "date_added": "YYYY-MM-DD"
 }
 ```
+
+`source` is where it was first seen; `sources` (added automatically on enrichment)
+lists every place it's since turned up.
 
 `id` is added automatically by `catalog_lib` (from the skill `url`, falling back
 to `post_url`); don't set it yourself.

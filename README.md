@@ -96,10 +96,17 @@ Catalog entry shape:
   "post_url": "https://linkedin.com/posts/...",
   "author": "Jane Doe",
   "source": "saved | messages | feed",
+  "sources": ["saved", "messages"],
   "keywords": ["pdf", "form", "fill", "document"],
   "date_added": "2026-07-05"
 }
 ```
+
+The same skill seen in more than one place (say a saved post *and* a DM) is stored
+**once**. If a later sighting has something the first was missing — most often the
+repo link, because the poster put it in a DM or a comment — that entry is
+**enriched** (link filled in, keywords merged, every source recorded in `sources`)
+rather than duplicated. Different repos that happen to share a name stay separate.
 
 Why a dedicated JSON file instead of Claude's built-in memory? Recall has to work
 across *all* your projects, and the hook needs machine-readable `keywords` to

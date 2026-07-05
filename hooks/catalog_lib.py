@@ -78,6 +78,77 @@ def entry_id(post_url):
     return "p:" + _hash((post_url or "").strip().lower())
 
 
+def _name_author(entry):
+    return (
+        (entry.get("name", "") or "").strip().lower(),
+        (entry.get("author", "") or "").strip().lower(),
+    )
+
+
+def same_skill(a, b):
+    """Are these two entries the same skill?
+
+    - Both have links -> same only if the links match (different repos stay
+      distinct even when the name/author are identical).
+    - Same post URL -> same sighting.
+    - Otherwise (at least one has no link) -> match on name+author, so a
+      linkless saved-post entry and a linked DM of the same skill are recognized
+      as one (and the link can then be filled in — see _enrich).
+    """
+    ua, ub = _norm_url(a.get("url")), _norm_url(b.get("url"))
+    if ua and ub:
+        return ua == ub
+    pa = (a.get("post_url") or "").strip().lower()
+    pb = (b.get("post_url") or "").strip().lower()
+    if pa and pb and pa == pb:
+        return True
+    na, nb = _name_author(a), _name_author(b)
+    return bool(na[0]) and na == nb
+
+
+def _merge_list(existing_list, new_list):
+    out = list(existing_list or [])
+    seen = {str(x).lower() for x in out}
+    for x in new_list or []:
+        if str(x).lower() not in seen:
+            out.append(x)
+            seen.add(str(x).lower())
+    return out
+
+
+def _enrich(existing, new):
+    """Fill gaps in an existing entry from a new sighting of the same skill.
+
+    Notably: if the existing entry has no link and the new one does (the
+    'saw it in a saved post without the repo link, then got the link in a DM'
+    case), the link is filled in. Returns True if anything changed.
+    """
+    changed = False
+    if not _norm_url(existing.get("url")) and _norm_url(new.get("url")):
+        existing["url"] = new["url"]
+        if new.get("link_source"):
+            existing["link_source"] = new["link_source"]
+        changed = True
+    for field in ("summary", "author", "post_url", "date_added"):
+        if not existing.get(field) and new.get(field):
+            existing[field] = new[field]
+            changed = True
+    merged = _merge_list(existing.get("keywords"), new.get("keywords"))
+    if merged != (existing.get("keywords") or []):
+        existing["keywords"] = merged
+        changed = True
+    new_source = new.get("source")
+    if new_source:
+        sources = existing.get("sources")
+        if not sources:
+            sources = [existing["source"]] if existing.get("source") else []
+        if new_source not in sources:
+            sources.append(new_source)
+            changed = True
+        existing["sources"] = sources
+    return changed
+
+
 def tokenize(text):
     """Lowercase word tokens, minus stopwords and very short tokens."""
     tokens = re.findall(r"[a-z0-9]+", (text or "").lower())
@@ -99,27 +170,26 @@ def score_entry(prompt_tokens, entry):
 
 
 def add_entries(new_entries):
-    """Append new entries, skipping ones already present.
+    """Add sightings to the catalog, deduping and enriching by skill identity.
 
-    Identity is the skill's link (see entry_key), so the same skill seen in
-    multiple sources is stored once; the first sighting wins. Returns the number
-    of entries actually added.
+    For each new entry: if it matches an existing skill (see same_skill), the
+    existing entry is enriched with any details the new sighting adds (e.g. a
+    repo link that was missing); otherwise it's appended as a new skill.
+
+    Returns a dict: {"added": int, "enriched": int, "total": int}.
     """
     catalog = load_catalog()
-    existing = set()
-    for e in catalog:
-        existing.add(entry_key(e))
-        if e.get("id"):
-            existing.add(e["id"])  # honor ids written by older versions
     added = 0
-    for e in new_entries:
-        key = entry_key(e)
-        if key in existing:
+    enriched = 0
+    for new in new_entries:
+        match = next((ex for ex in catalog if same_skill(ex, new)), None)
+        if match is not None:
+            if _enrich(match, new):
+                enriched += 1
             continue
-        e.setdefault("id", key)
-        catalog.append(e)
-        existing.add(key)
+        new.setdefault("id", entry_key(new))
+        catalog.append(new)
         added += 1
-    if added:
+    if added or enriched:
         save_catalog(catalog)
-    return added
+    return {"added": added, "enriched": enriched, "total": len(catalog)}

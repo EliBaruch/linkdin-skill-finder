@@ -24,9 +24,9 @@ def main():
     if not isinstance(entries, list):
         print("error: expected a JSON array of entry objects")
         return 1
-    added = catalog_lib.add_entries(entries)
-    print(f"added {added} new skill(s); catalog now has "
-          f"{len(catalog_lib.load_catalog())} total")
+    res = catalog_lib.add_entries(entries)
+    print(f"added {res['added']} new skill(s), enriched {res['enriched']} "
+          f"existing; catalog now has {res['total']} total")
     return 0
 
 
