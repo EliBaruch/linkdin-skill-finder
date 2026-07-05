@@ -150,9 +150,17 @@ def _enrich(existing, new):
 
 
 def tokenize(text):
-    """Lowercase word tokens, minus stopwords and very short tokens."""
+    """Lowercase word tokens, minus stopwords and 1-char tokens.
+
+    Keeps 2-char tokens so domain shorthands survive (fp, ai, ml, hr, ui, db...).
+    """
     tokens = re.findall(r"[a-z0-9]+", (text or "").lower())
-    return {t for t in tokens if len(t) >= 3 and t not in _STOPWORDS}
+    return {t for t in tokens if len(t) >= 2 and t not in _STOPWORDS}
+
+
+def normalize(text):
+    """Lowercase, alphanumeric-only — collapses 'FP&A' / 'FP and A' toward 'fpa'."""
+    return re.sub(r"[^a-z0-9]+", "", (text or "").lower())
 
 
 def entry_tokens(entry):
@@ -167,6 +175,21 @@ def entry_tokens(entry):
 def score_entry(prompt_tokens, entry):
     """How many tokens the prompt shares with this entry."""
     return len(prompt_tokens & entry_tokens(entry))
+
+
+def lexical_score(prompt_tokens, prompt_norm, entry):
+    """Lenient lexical relevance used only to PREFILTER very large catalogs.
+
+    Token overlap, plus a bonus when a compact keyword (e.g. 'fpa') appears as a
+    substring of the normalized prompt. This is a coarse net, not the final call
+    on relevance — that judgment is the model's (see recall_hook.py).
+    """
+    score = len(prompt_tokens & entry_tokens(entry))
+    for kw in entry.get("keywords", []) or []:
+        k = normalize(kw)
+        if len(k) >= 3 and k in prompt_norm:
+            score += 1
+    return score
 
 
 def add_entries(new_entries):

@@ -67,16 +67,16 @@ link) — the collector reads the first comment for exactly that case.
 ### Recall — automatic, every task
 
 You don't do anything. When you ask Claude to do something, a `UserPromptSubmit`
-hook quietly checks your catalog and, if a saved skill looks relevant, notes it:
+hook slips your saved skills into the conversation and lets **Claude judge** which
+(if any) fit your request — then it tells you and offers to fetch it.
 
-```
-💡 Saved LinkedIn skills that may fit this task:
-1. PDF Form Filler — Fills PDF form fields from a data file. (https://github.com/...)
-If one fits, say "fetch it" ...
-```
+The judgment is the model's, not a keyword match, on purpose: a plain word-overlap
+can't connect *"build an FP&A reporting system in Excel"* to a saved *"FP&A finance
+skill"* — the words don't overlap even though they're obviously related. Handing
+the skills to Claude bridges that. If nothing is relevant, Claude stays quiet.
 
-Say **"fetch it"** (or name the skill) and Claude will pull the skill in — it asks
-before installing anything.
+Say **"fetch it"** (or name the skill) and Claude will pull it in — it asks before
+installing anything.
 
 ## Where your data lives
 
@@ -131,5 +131,7 @@ commands/
   collect-linkedin-skills.md
 ```
 
-Tuning recall precision: `SCORE_THRESHOLD` in `hooks/recall_hook.py` (default 2 —
-the number of shared keywords required before a skill is surfaced).
+Tuning recall: `INLINE_CAP` in `hooks/recall_hook.py` (default 40) is how many
+saved skills get placed in front of Claude per prompt. Under that many, all of
+them are shown and Claude judges relevance; above it, a lenient lexical prefilter
+keeps the injected set bounded (and notes how many were withheld).
