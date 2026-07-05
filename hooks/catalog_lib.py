@@ -47,10 +47,35 @@ def save_catalog(entries):
         json.dump(entries, f, indent=2, ensure_ascii=False)
 
 
+def _hash(s):
+    return hashlib.sha1((s or "").encode("utf-8")).hexdigest()[:12]
+
+
+def _norm_url(u):
+    return (u or "").strip().lower().rstrip("/")
+
+
+def entry_key(entry):
+    """Identity of a skill for dedupe.
+
+    Prefer the actual skill link (`url`) so the SAME skill found in different
+    places — a saved post, a DM, the feed — collapses into ONE entry instead of
+    being stored again. Fall back to the post URL, then to name+author (so DM
+    entries with no post URL don't all collide on an empty key).
+    """
+    url = _norm_url(entry.get("url"))
+    if url:
+        return "u:" + _hash(url)
+    post = (entry.get("post_url") or "").strip().lower()
+    if post:
+        return "p:" + _hash(post)
+    name_author = (entry.get("name", "") + "|" + entry.get("author", "")).strip().lower()
+    return "n:" + _hash(name_author)
+
+
 def entry_id(post_url):
-    """Stable short id derived from the LinkedIn post URL (the dedupe key)."""
-    norm = (post_url or "").strip().lower()
-    return hashlib.sha1(norm.encode("utf-8")).hexdigest()[:12]
+    """Backward-compatible id derived from a post URL. Prefer entry_key()."""
+    return "p:" + _hash((post_url or "").strip().lower())
 
 
 def tokenize(text):
@@ -74,22 +99,26 @@ def score_entry(prompt_tokens, entry):
 
 
 def add_entries(new_entries):
-    """Append new entries, skipping ones already present (by id/post_url).
+    """Append new entries, skipping ones already present.
 
-    Returns the number of entries actually added.
+    Identity is the skill's link (see entry_key), so the same skill seen in
+    multiple sources is stored once; the first sighting wins. Returns the number
+    of entries actually added.
     """
     catalog = load_catalog()
-    existing = {
-        e.get("id") or entry_id(e.get("post_url", "")) for e in catalog
-    }
+    existing = set()
+    for e in catalog:
+        existing.add(entry_key(e))
+        if e.get("id"):
+            existing.add(e["id"])  # honor ids written by older versions
     added = 0
     for e in new_entries:
-        eid = e.get("id") or entry_id(e.get("post_url", ""))
-        if eid in existing:
+        key = entry_key(e)
+        if key in existing:
             continue
-        e["id"] = eid
+        e.setdefault("id", key)
         catalog.append(e)
-        existing.add(eid)
+        existing.add(key)
         added += 1
     if added:
         save_catalog(catalog)

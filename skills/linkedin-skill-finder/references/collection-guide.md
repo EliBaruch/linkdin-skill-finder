@@ -88,7 +88,9 @@ Good keywords are what make recall fire later.
 
 - Write the array to a temp file and run:
   `python "${CLAUDE_PLUGIN_ROOT}/hooks/collect_add.py" < entries.json`
-- It dedupes by `post_url`, so re-running collection is safe.
+- It dedupes by the skill's `url` (falling back to `post_url`, then name+author),
+  so the same skill seen in a saved post and a DM becomes one entry, and
+  re-running collection is safe.
 - Report: posts scanned, new skills added, and the list of new names. Mention the
   scroll cap. If nothing new, say so plainly.
 

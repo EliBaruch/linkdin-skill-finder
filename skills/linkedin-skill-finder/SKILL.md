@@ -42,7 +42,9 @@ Follow **`references/collection-guide.md`** step by step. In short:
      Take the link from the top comment and set `link_source: "first_comment"`.
    - If a link is only ever in the body, set `link_source: "body"`.
 4. Generate 4–8 lowercase `keywords` per skill (these drive recall matching).
-5. Dedupe + append with `catalog_lib.add_entries(...)` (keyed on `post_url`).
+5. Dedupe + append with `catalog_lib.add_entries(...)`. Identity is the skill's
+   `url`, so the same skill seen in a saved post AND a DM collapses to one entry
+   (first sighting wins); it falls back to `post_url`, then name+author.
 6. Report: how many posts scanned, how many new skills added, and list the new
    names. If nothing new, say so.
 
@@ -82,4 +84,5 @@ hook surfaced one), or asks to install a catalogued skill:
 }
 ```
 
-`id` is added automatically by `catalog_lib` from `post_url`; don't set it yourself.
+`id` is added automatically by `catalog_lib` (from the skill `url`, falling back
+to `post_url`); don't set it yourself.
