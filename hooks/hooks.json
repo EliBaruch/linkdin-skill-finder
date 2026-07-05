@@ -1,0 +1,15 @@
+{
+  "description": "LinkedIn Skill Finder — on each prompt, surface saved LinkedIn skills relevant to the task.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/lsf-python.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/recall_hook.py\""
+          }
+        ]
+      }
+    ]
+  }
+}

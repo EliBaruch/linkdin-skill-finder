@@ -1,0 +1,9 @@
+{
+  "name": "linkedin-skill-finder",
+  "description": "Collect Claude/AI skills shared on LinkedIn into a personal catalog, then automatically surface the relevant saved skill whenever you start a task.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Eli Baruch"
+  },
+  "homepage": "https://github.com/EliBaruch/linkdin-skill-finder"
+}

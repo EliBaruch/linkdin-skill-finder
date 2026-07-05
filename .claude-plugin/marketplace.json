@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "linkdin-skill-finder",
+  "description": "LinkedIn Skill Finder — collect skills shared on LinkedIn and recall the relevant one on every task.",
+  "owner": {
+    "name": "Eli Baruch"
+  },
+  "plugins": [
+    {
+      "name": "linkedin-skill-finder",
+      "description": "Collect Claude/AI skills shared on LinkedIn into a personal catalog, then automatically surface the relevant saved skill whenever you start a task.",
+      "source": "./",
+      "category": "productivity",
+      "homepage": "https://github.com/EliBaruch/linkdin-skill-finder"
+    }
+  ]
+}

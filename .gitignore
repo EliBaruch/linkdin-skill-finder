@@ -1,0 +1,8 @@
+# Python
+__pycache__/
+*.pyc
+
+# Scratch / local
+*.log
+entries.json
+.DS_Store
