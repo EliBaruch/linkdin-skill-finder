@@ -53,8 +53,7 @@ Chrome browser tools), then run:
 ```
 /collect-linkedin-skills            # scans your Saved posts (default)
 /collect-linkedin-skills --messages # scans your LinkedIn messages/DMs
-/collect-linkedin-skills --feed     # scans your home feed
-/collect-linkedin-skills --all      # all three
+/collect-linkedin-skills --all      # saved, then messages
 ```
 
 or just say *"scan my LinkedIn for skills"*.
@@ -68,6 +67,25 @@ Saved links are **auto-cleaned of tracking junk** — utm_* tags, click ids
 (`gclid`/`fbclid`/…), LinkedIn `trk`/`li_fat_id`, and other lead trackers are
 stripped, while genuine parameters are kept. So the catalog stores the real
 destination, and fetching a skill never phones home someone's lead tracker.
+
+### Staying friendly to LinkedIn (not a bot)
+
+The collector runs **read-only, in your own logged-in Chrome, on demand** — the
+same fingerprint as you browsing — which is why the odds of a bot flag are low.
+The plugin keeps it that way with built-in guardrails:
+
+- **Read-only** — it never connects, follows, likes, comments, posts, or messages.
+  Write-actions are the biggest tell of a bot; this tool takes none.
+- **Human-like scrolling** — each scroll varies in **distance** (a random 1–3
+  posts) and **delay** (a random ~0.5–1.5s), so there's no metronome rhythm.
+- **Bounded** — a default of 5 scroll passes; it tells you the cap and never
+  crawls unattended. Don't wire it to `/loop` or a scheduler.
+- **No feed crawl, no API scraping, no logging in for you** — it only reads what's
+  visible in your real tab (Saved posts, or DMs on request).
+
+Automated access still technically brushes against LinkedIn's ToS, but realistic
+enforcement targets scraping volume, write-actions, and datacenter bots — none of
+which this does. Run it occasionally and interactively and you're in good shape.
 
 ### Recall — automatic, every task
 
@@ -100,7 +118,7 @@ Catalog entry shape:
   "link_source": "body | first_comment",
   "post_url": "https://linkedin.com/posts/...",
   "author": "Jane Doe",
-  "source": "saved | messages | feed",
+  "source": "saved | messages",
   "sources": ["saved", "messages"],
   "keywords": ["pdf", "form", "fill", "document"],
   "date_added": "2026-07-05"

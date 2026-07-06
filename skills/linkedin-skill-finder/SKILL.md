@@ -1,6 +1,6 @@
 ---
 name: linkedin-skill-finder
-description: Collect Claude/AI skills shared on LinkedIn (saved posts, messages, or feed) into a personal catalog, and fetch a saved skill on request. Use when the user wants to scan or collect LinkedIn for skills, save skills they've seen on LinkedIn, or pull in a previously-saved LinkedIn skill.
+description: Collect Claude/AI skills shared on LinkedIn (saved posts or messages) into a personal catalog, and fetch a saved skill on request. Use when the user wants to scan or collect LinkedIn for skills, save skills they've seen on LinkedIn, or pull in a previously-saved LinkedIn skill.
 ---
 
 # LinkedIn Skill Finder
@@ -23,8 +23,10 @@ LinkedIn", "/collect-linkedin-skills", "add these LinkedIn skills to my catalog"
 
 - `--saved` (**default**): the user's LinkedIn Saved list — `linkedin.com/my-items/saved-posts/`. Most reliable.
 - `--messages`: LinkedIn messages/DMs — `linkedin.com/messaging/`.
-- `--feed`: the home feed — `linkedin.com/feed/`. Noisiest; only sees loaded posts.
-- `--all`: run saved, then messages, then feed.
+- `--all`: run saved, then messages.
+
+There is no feed scan — reading the saved list and DMs covers what people share,
+and crawling the home feed is the noisiest, most crawler-like surface.
 
 ### How to collect
 
@@ -34,6 +36,9 @@ Follow **`references/collection-guide.md`** step by step. In short:
    LinkedIn tab if one exists; otherwise open a new tab to the source URL.
 2. Read the page (`get_page_text` / `read_page`) and scroll a **bounded** number
    of times (default 5). Tell the user the scroll cap — never imply you saw more.
+   **Randomize each scroll** — vary both the distance (a random 1–3 posts) and the
+   pause between passes (a random ~0.5–1.5s), never a fixed rhythm. The guide has
+   a `javascript_tool` snippet that does both with `Math.random()`.
 3. For each post, judge: *is this sharing a Claude/AI skill?* If yes, extract
    `name`, `summary`, `author`, `post_url`, and the **skill link (`url`)**:
    - Check the post **body** first.
@@ -64,6 +69,21 @@ LinkedIn `trk`/`li_fat_id`, etc. — via `catalog_lib.clean_url`), so you don't 
 to strip them yourself. It cleans query params only; it does not unwrap shortened
 links like `lnkd.in` (the fetch step follows those redirects).
 
+## Safety — stay a reader, never a bot
+
+This runs read-only in the user's own logged-in Chrome, which is why it's low-risk
+to LinkedIn. Keep it that way (full list in `references/collection-guide.md`):
+
+- **Read only.** Never connect, follow, like, comment, post, or send messages.
+  Clicking a comment icon to *read* the first comment is fine; changing any state
+  on LinkedIn is not.
+- **Never unattended.** Don't drive this from `/loop`, cron, `schedule`, or any
+  recurring/background trigger — it runs interactively, on demand.
+- **Bounded, randomized scroll** (default 5 passes; random distance and delay).
+- **Don't loop on failures** — after 2–3 tries, record what you have and move on.
+- **No headless/API scraping and never log in for the user** — only read what's
+  visible in their real, already-authenticated tab.
+
 ## When to fetch
 
 If the user says "fetch it" / names a saved skill (often right after the recall
@@ -87,7 +107,7 @@ hook surfaced one), or asks to install a catalogued skill:
   "link_source": "body | first_comment",
   "post_url": "https://linkedin.com/posts/...",
   "author": "Jane Doe",
-  "source": "saved | messages | feed",
+  "source": "saved | messages",
   "sources": ["saved", "messages"],
   "keywords": ["pdf", "form", "fill", "document"],
   "date_added": "YYYY-MM-DD"

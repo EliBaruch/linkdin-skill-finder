@@ -21,11 +21,12 @@ select:mcp__claude-in-chrome__tabs_context_mcp,mcp__claude-in-chrome__navigate,m
 |--------------|--------------------------------------------|
 | `--saved`    | `https://www.linkedin.com/my-items/saved-posts/` |
 | `--messages` | `https://www.linkedin.com/messaging/`      |
-| `--feed`     | `https://www.linkedin.com/feed/`           |
 
-`--all` runs saved → messages → feed in sequence.
+`--all` runs saved → messages in sequence. (There is no feed scan — reading your
+own saved list and DMs is enough, and crawling the home feed is both noisy and the
+most crawler-like surface. See the safety guardrails at the bottom.)
 
-## 2. Load content (bounded scroll)
+## 2. Load content (bounded, human-like scroll)
 
 - `get_page_text` (fast) or `read_page` to capture what's visible.
 - Scroll to load more: default **5 scroll passes**, capturing text after each.
@@ -33,6 +34,30 @@ select:mcp__claude-in-chrome__tabs_context_mcp,mcp__claude-in-chrome__navigate,m
   cap to the user** ("scanned the first ~N posts"). Never imply full coverage.
 - If the user asks for more, raise the pass count; otherwise keep it bounded so
   the run stays quick.
+
+### Randomize every scroll — never scroll on a fixed rhythm or fixed distance
+
+A metronome (same pause, same distance every pass) is the single most bot-like
+thing a reader can do. So make each pass different:
+
+- **Vary the distance.** Scroll a random **1–3 posts' worth** each pass — three
+  posts one time, one the next, two after that. No set stride.
+- **Vary the delay** between passes — a random pause each time, e.g. roughly
+  **0.5s / 1.0s / 1.5s** (or any value in that range), never the same twice.
+- Do both **inside one `javascript_tool` call**, where `Math.random()` is
+  available, so the randomness is real rather than you eyeballing it. Randomize
+  the scroll amount and an in-page `setTimeout` pause together:
+
+```js
+// one randomized, human-like scroll pass
+const posts = 1 + Math.floor(Math.random() * 3);            // 1–3 posts
+const px    = posts * (600 + Math.floor(Math.random() * 300)); // vary length
+window.scrollBy(0, px);
+await new Promise(r => setTimeout(r, 500 + Math.random() * 1000)); // ~0.5–1.5s
+```
+
+Then capture the newly loaded text and repeat for the next pass with fresh random
+values. Applies to **both** saved posts and DMs.
 
 ## 3. Identify skill posts
 
@@ -74,7 +99,7 @@ For each captured skill, build an object:
   "link_source": "body | first_comment",
   "post_url": "<the LinkedIn post permalink>",
   "author": "<poster name>",
-  "source": "saved | messages | feed",
+  "source": "saved | messages",
   "keywords": ["4-8", "lowercase", "topic", "words"],
   "date_added": "<today's date, YYYY-MM-DD>"
 }
@@ -105,3 +130,30 @@ Good keywords are what make recall fire later.
   (or empty url) and move on; don't loop.
 - Messages/DMs: skill links usually sit inside a conversation thread — open the
   relevant thread, read it, and extract shared links the same way.
+
+## Safety guardrails — stay a reader, never a bot
+
+This collector runs inside the user's own logged-in Chrome via the browser
+extension, read-only and on demand. That is exactly why it's low-risk to LinkedIn.
+Keep it that way — these are hard rules, not suggestions:
+
+- **Read only. Never take write-actions.** No connecting, following, liking,
+  commenting, posting, or sending messages — ever. Clicking a post's comment icon
+  purely to *read* the first comment is fine; anything that changes state on
+  LinkedIn is off-limits. Write-actions are the single biggest line between a
+  reader and a bot in LinkedIn's eyes.
+- **Never run this unattended.** Do not drive this skill from `/loop`, a cron
+  job, `schedule`, or any background/recurring trigger. It runs when the user asks
+  for it, interactively. A steady automated cadence is what builds a machine-like
+  signature.
+- **Keep the scroll bounded and human-like.** Default 5 passes; only raise it when
+  the user explicitly asks. Always randomize distance and delay (section 2). Never
+  crank passes into the dozens as a default.
+- **Don't loop on failures.** If comment expansion (or any interaction) fails
+  after 2–3 tries, record what you have and move on. A rapid retry storm of clicks
+  is exactly what automation heuristics flag.
+- **Prefer `--saved`.** Reading your own static saved list is the least suspicious
+  surface. `--messages` is fine on demand; don't deep-crawl every DM thread.
+- **Never scrape via LinkedIn's private/voyager API or a headless browser, and
+  never log in on the user's behalf.** Only read what's visible in the user's real,
+  already-authenticated tab.

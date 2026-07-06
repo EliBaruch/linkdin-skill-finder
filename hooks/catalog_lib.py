@@ -60,7 +60,7 @@ def entry_key(entry):
     """Identity of a skill for dedupe.
 
     Prefer the actual skill link (`url`) so the SAME skill found in different
-    places — a saved post, a DM, the feed — collapses into ONE entry instead of
+    places — a saved post and a DM — collapses into ONE entry instead of
     being stored again. Fall back to the post URL, then to name+author (so DM
     entries with no post URL don't all collide on an empty key).
     """
